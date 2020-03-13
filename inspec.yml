@@ -19,7 +19,7 @@ copyright: Darkbit.io
 copyright_email: info@darkbit.io
 license: Apache-2.0
 summary: "Assesses key areas of a single GKE Cluster"
-version: "0.1.0"
+version: "0.1.1"
 supports:
   - platform: gcp
 depends:
@@ -29,10 +29,16 @@ depends:
 attributes:
 - name: project_id
   description: 'GCP Project ID'
+  required: true
+  value: ""
   type: string
 - name: location
   description: 'GKE region or zone name'
+  required: true
+  value: ""
   type: string
 - name: clustername
   description: 'GKE cluster name'
+  required: true
+  value: ""
   type: string
