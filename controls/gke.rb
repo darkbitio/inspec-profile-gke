@@ -16,9 +16,9 @@
 
 title 'Evaluate GKE Cluster Configuration Best Practices'
 
-project_id = attribute('project_id')
-location = attribute('location')
-clustername = attribute('clustername')
+project_id = input('project_id')
+location = input('location')
+clustername = input('clustername')
 
 control 'gke-1' do
   impact 0.8
@@ -44,9 +44,9 @@ VALIDATION
   ref 'GKE Monitoring and Logging', url: 'https://cloud.google.com/monitoring/kubernetes-engine'
 
   describe "#{project_id}/#{location}/#{clustername}:" do
-    subject { google_container_regional_cluster(project: project_id, location: location, name: clustername) }
-    its('logging_service') { should match '/^logging.googleapis.com\/kubernetes/' }
-    its('monitoring_service') { should match '/^monitoring.googleapis.com\/kubernetes/' }
+    subject { modified_google_container_cluster(project: project_id, location: location, name: clustername, beta: true) }
+    its('logging_service') { should match /logging.googleapis.com\/kubernetes/ }
+    its('monitoring_service') { should match /monitoring.googleapis.com\/kubernetes/ }
   end
 end
 
@@ -75,7 +75,7 @@ VALIDATION
   ref 'Auth', url: 'https://cloud.google.com/kubernetes-engine/docs/how-to/iam-integration'
 
   describe "#{project_id}/#{location}/#{clustername}:" do
-    subject { google_container_regional_cluster(project: project_id, location: location, name: clustername) }
+    subject { modified_google_container_cluster(project: project_id, location: location, name: clustername, beta: true) }
     its('master_auth.username') { should cmp nil }
   end
 end
@@ -105,7 +105,7 @@ VALIDATION
   ref 'GKE Private Nodes', url: 'https://cloud.google.com/kubernetes-engine/docs/how-to/private-clusters'
 
   describe "#{project_id}/#{location}/#{clustername}:" do
-    subject { google_container_regional_cluster(project: project_id, location: location, name: clustername) }
+    subject { modified_google_container_cluster(project: project_id, location: location, name: clustername, beta: true) }
     its('private_cluster_config.enable_private_nodes') { should cmp true }
   end
 end
@@ -135,7 +135,7 @@ VALIDATION
   ref 'GKE Private Control Plane', url: 'https://cloud.google.com/kubernetes-engine/docs/how-to/private-clusters'
   ref 'GKE Master Authorized Networks', url: 'https://cloud.google.com/kubernetes-engine/docs/how-to/authorized-networks'
 
-  cluster = google_container_regional_cluster(project: project_id, location: location, name: clustername)
+  cluster = modified_google_container_cluster(project: project_id, location: location, name: clustername, beta: true)
   describe.one do
     describe "#{project_id}/#{location}/#{clustername}:" do
       subject { cluster }
@@ -176,7 +176,7 @@ VALIDATION
   ref 'Network Policy', url: 'https://kubernetes.io/docs/concepts/services-networking/network-policies/#the-networkpolicy-resource'
 
   describe "#{project_id}/#{location}/#{clustername}:" do
-    subject { google_container_regional_cluster(project: project_id, location: location, name: clustername) }
+    subject { modified_google_container_cluster(project: project_id, location: location, name: clustername, beta: true) }
     its('network_policy.enabled') { should cmp true }
   end
 end
@@ -207,22 +207,22 @@ VALIDATION
   ref 'GCP Service Account Permissions', url: 'https://cloud.google.com/compute/docs/access/service-accounts#service_account_permissions'
   ref 'GCP Default Service Account', url: 'https://cloud.google.com/compute/docs/access/service-accounts#default_service_account'
 
-  google_container_regional_node_pools(project: project_id, location: location, cluster: clustername).names.each do |nodepool|
+  modified_google_container_node_pools(project: project_id, location: location, cluster_name: clustername).node_pool_names.each do |nodepool|
     describe "#{project_id}/#{location}/#{clustername}/#{nodepool}:" do
-      subject { google_container_regional_node_pool(project: project_id, location: location, cluster: clustername, name: nodepool) }
+      subject { modified_google_container_node_pool(project: project_id, location: location, cluster_name: clustername, nodepool_name: nodepool, beta: true) }
       its('config.service_account') { should_not cmp 'default' }
-      its('config.oauth_scopes') { should_not include '/cloud-platform/' }
-      its('config.oauth_scopes') { should_not include '/compute/' }
-      its('config.oauth_scopes') { should_not include '/compute-ro/' }
-      its('config.oauth_scopes') { should_not include '/compute-rw/' }
-      its('config.oauth_scopes') { should_not include '/container/' }
-      its('config.oauth_scopes') { should_not include '/iam/' }
-      its('config.oauth_scopes') { should include '/devstorage.read_only/' }
-      its('config.oauth_scopes') { should include '/logging.write/' }
-      its('config.oauth_scopes') { should include '/monitoring/' }
-      its('config.oauth_scopes') { should include '/service.management.readonly/' }
-      its('config.oauth_scopes') { should include '/servicecontrol/' }
-      its('config.oauth_scopes') { should include '/trace.append/' }
+      its('config.oauth_scopes') { should_not include /cloud-platform/ }
+      its('config.oauth_scopes') { should_not include /compute/ }
+      its('config.oauth_scopes') { should_not include /compute-ro/ }
+      its('config.oauth_scopes') { should_not include /compute-rw/ }
+      its('config.oauth_scopes') { should_not include /container/ }
+      its('config.oauth_scopes') { should_not include /iam/ }
+      its('config.oauth_scopes') { should include /devstorage.read_only/ }
+      its('config.oauth_scopes') { should include /logging.write/ }
+      its('config.oauth_scopes') { should include /monitoring/ }
+      its('config.oauth_scopes') { should include /service.management.readonly/ }
+      its('config.oauth_scopes') { should include /servicecontrol/ }
+      its('config.oauth_scopes') { should include /trace.append/ }
     end
   end
 end
@@ -251,10 +251,10 @@ VALIDATION
 
   ref 'GKE Node Images', url: 'https://cloud.google.com/kubernetes-engine/docs/concepts/node-images'
 
-  google_container_regional_node_pools(project: project_id, location: location, cluster: clustername).names.each do |nodepool|
+  modified_google_container_node_pools(project: project_id, location: location, cluster_name: clustername).node_pool_names.each do |nodepool|
     describe "#{project_id}/#{location}/#{clustername}/#{nodepool}:" do
-      subject { google_container_regional_node_pool(project: project_id, location: location, cluster: clustername, name: nodepool) }
-      its('config.imageType') { should match '/^COS.*/i' }
+      subject { modified_google_container_node_pool(project: project_id, location: location, cluster_name: clustername, nodepool_name: nodepool, beta: true) }
+      its('config.image_type') { should match /^COS.*/i }
     end
   end
 end
@@ -285,21 +285,20 @@ VALIDATION
   ref 'Hardening GKE', url: 'https://cloud.google.com/kubernetes-engine/docs/how-to/hardening-your-cluster#workload_identity'
 
   describe "#{project_id}/#{location}/#{clustername}:" do
-    subject { google_container_regional_cluster(project: project_id, location: location, name: clustername) }
+    subject { modified_google_container_cluster(project: project_id, location: location, name: clustername, beta: true) }
     it 'should have workload identity configured at the cluster level' do
-      expect(subject.config).to respond_to(:workloadIdentityConfig)
-      expect(subject.config.workloadIdentityConfig).to respond_to(:workloadPool)
-      expect(subject.config.workloadIdentityConfig.workloadPool).not_to be nil
+      expect(subject.fetched['workloadIdentityConfig']).not_to be nil
+      expect(subject.fetched['workloadIdentityConfig']['workloadPool']).not_to be nil
     end
   end
 
-  google_container_regional_node_pools(project: project_id, location: location, cluster: clustername).names.each do |nodepool|
+  modified_google_container_node_pools(project: project_id, location: location, cluster_name: clustername).node_pool_names.each do |nodepool|
     describe "#{project_id}/#{location}/#{clustername}/#{nodepool}:" do
-      subject { google_container_regional_node_pool(project: project_id, location: location, cluster: clustername, name: nodepool) }
+      subject { modified_google_container_node_pool(project: project_id, location: location, cluster_name: clustername, nodepool_name: nodepool, beta: true) }
       it 'should have workload identity metadata server on the node pool' do
-        expect(subject.config).to respond_to(:workloadMetadataConfig)
-        expect(subject.config.workloadMetadataConfig).to respond_to(:mode)
-        expect(subject.config.workloadMetadataConfig.mode).to eq('GKE_METADATA')
+        expect(subject.fetched['config']['workloadMetadataConfig']).not_to be nil
+        expect(subject.fetched['config']['workloadMetadataConfig']['mode']).not_to be nil
+        expect(subject.fetched['config']['workloadMetadataConfig']['mode']).to eq('GKE_METADATA')
       end
     end
   end
@@ -330,16 +329,12 @@ VALIDATION
   ref 'GKE Regional Clusters', url: 'https://cloud.google.com/kubernetes-engine/docs/concepts/regional-clusters'
 
   describe "#{project_id}/#{location}/#{clustername}:" do
-    subject { google_container_regional_cluster(project: project_id, location: location, name: clustername) }
-    it 'should have a location that specifies a region' do
-      expect(subject.config).to respond_to(:location)
-      # want to match us-east4 for regional, not us-central1-a for zonal
-      expect(subject.config.location).to match('/^\w+\-\w+$/')
-    end
+    subject { modified_google_container_cluster(project: project_id, location: location, name: clustername, beta: true) }
+    its('location') { should match /^\w+\-\w+$/ }
   end
 end
 
-control 'gke-8' do
+control 'gke-10' do
   impact 0.5
 
   title 'GKE Shielded Nodes should be enabled on all NodePools'
@@ -364,13 +359,20 @@ VALIDATION
   ref 'GKE Shielded Nodes', url: 'https://cloud.google.com/kubernetes-engine/docs/how-to/shielded-gke-nodes'
   ref 'Hardening GKE', url: 'https://cloud.google.com/kubernetes-engine/docs/how-to/hardening-your-cluster#shielded_nodes'
 
-  google_container_regional_node_pools(project: project_id, location: location, cluster: clustername).names.each do |nodepool|
+  describe "#{project_id}/#{location}/#{clustername}:" do
+    subject { modified_google_container_cluster(project: project_id, location: location, name: clustername, beta: true) }
+    it 'should have shielded nodes set at the cluster level' do
+      expect(subject.fetched['shieldedNodes']).not_to be nil
+      expect(subject.fetched['shieldedNodes']['enabled']).to eq(true)
+    end
+  end
+
+  modified_google_container_node_pools(project: project_id, location: location, cluster_name: clustername).node_pool_names.each do |nodepool|
     describe "#{project_id}/#{location}/#{clustername}/#{nodepool}:" do
-      subject { google_container_regional_node_pool(project: project_id, location: location, cluster: clustername, name: nodepool) }
+      subject { modified_google_container_node_pool(project: project_id, location: location, cluster_name: clustername, nodepool_name: nodepool, beta: true) }
       it 'should have workload identity metadata server on the node pool' do
-        expect(subject.config).to respond_to(:shieldedInstanceConfig)
-        expect(subject.config.shieldedInstanceConfig).to respond_to(:enableIntegrityMonitoring)
-        expect(subject.config.shieldedInstanceConfig.enableIntegrityMonitoring).to eq(true)
+        expect(subject.fetched['config']['shieldedInstanceConfig']).not_to be nil
+        expect(subject.fetched['config']['shieldedInstanceConfig']['enableSecureBoot']).to eq(true)
       end
     end
   end
