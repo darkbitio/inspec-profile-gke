@@ -348,7 +348,7 @@ Modify the cluster node pool configuration to enable shielded nodes (--enable-sh
 REMEDIATION
 
   desc 'validation', <<~VALIDATION
-Run `gcloud container clusters describe <clustername> --format=json | jq -r 'select(.nodePools[].config.shieldedInstanceConfig.enableIntegrityMonitoring==true and .nodePools[].config.shieldedInstanceConfig.enableSecureBoot==true) | "\(.name)"'` and ensure that the cluster's name is listed.
+Run `gcloud container clusters describe <clustername> --region <location> --format json | jq -r 'select(.shieldedNodes.enabled and .nodePools[].config.shieldedInstanceConfig.enableSecureBoot==true) | .name'` and ensure that the cluster's name is listed for both commands.
 VALIDATION
 
   tag platform: 'GCP'
